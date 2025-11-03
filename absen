@@ -1,0 +1,488 @@
+<!doctype html>
+<html lang="id" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Absensi Digital Mahasiswa</title>
+  <script src="/_sdk/data_sdk.js"></script>
+  <script src="/_sdk/element_sdk.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+        body {
+            box-sizing: border-box;
+        }
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white !important; }
+        }
+    </style>
+  <style>@view-transition { navigation: auto; }</style>
+ </head>
+ <body class="h-full bg-gradient-to-br from-blue-50 to-green-50 font-sans">
+  <div class="min-h-full p-4"><!-- Header dengan tombol admin -->
+   <div class="flex justify-between items-start mb-6">
+    <div class="flex-1">
+     <h1 id="judul-utama" class="text-2xl md:text-3xl font-bold text-center text-blue-800 mb-2">ABSENSI MAHASISWA AIK STIT MUHAMMADIYAH TEMPURREJO DARING</h1>
+     <p id="nama-institusi" class="text-center text-gray-600 text-sm">Sistem Absensi Digital</p>
+    </div><button id="admin-btn" class="no-print bg-gray-600 hover:bg-gray-700 text-white px-3 py-1 rounded text-sm transition-colors"> Admin </button>
+   </div><!-- Halaman Mahasiswa -->
+   <div id="student-page" class="max-w-2xl mx-auto">
+    <div class="bg-white rounded-lg shadow-lg p-6">
+     <form id="absensi-form" class="space-y-4"><!-- Input Nama -->
+      <div><label for="nama" class="block text-sm font-medium text-gray-700 mb-2">Nama Mahasiswa</label> <input type="text" id="nama" name="nama" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Masukkan nama lengkap">
+      </div><!-- Pilihan Semester -->
+      <div><label for="semester" class="block text-sm font-medium text-gray-700 mb-2">Semester</label> <select id="semester" name="semester" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"> <option value="">Pilih Semester</option> <option value="1">Semester 1</option> <option value="2">Semester 2</option> <option value="3">Semester 3</option> <option value="4">Semester 4</option> <option value="5">Semester 5</option> <option value="6">Semester 6</option> <option value="7">Semester 7</option> <option value="8">Semester 8</option> <option value="transfer">Transfer</option> </select>
+      </div><!-- Pilihan Jurusan -->
+      <div><label for="jurusan" class="block text-sm font-medium text-gray-700 mb-2">Jurusan</label> <select id="jurusan" name="jurusan" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"> <option value="">Pilih Jurusan</option> <option value="PAI">PAI (Pendidikan Agama Islam)</option> <option value="PGMI">PGMI (Pendidikan Guru Madrasah Ibtidaiyah)</option> <option value="MPI">MPI (Manajemen Pendidikan Islam)</option> <option value="PIAUD">PIAUD (Pendidikan Islam Anak Usia Dini)</option> <option value="Kelas PONDOK">Kelas PONDOK</option> </select>
+      </div><!-- Tombol Status Kehadiran -->
+      <div><label class="block text-sm font-medium text-gray-700 mb-3">Status Kehadiran</label>
+       <div class="grid grid-cols-3 gap-3"><button type="button" class="status-btn bg-green-500 hover:bg-green-600 text-white py-3 px-4 rounded-md font-medium transition-colors" data-status="Hadir"> Hadir </button> <button type="button" class="status-btn bg-yellow-500 hover:bg-yellow-600 text-white py-3 px-4 rounded-md font-medium transition-colors" data-status="Sakit"> Sakit </button> <button type="button" class="status-btn bg-red-500 hover:bg-red-600 text-white py-3 px-4 rounded-md font-medium transition-colors" data-status="Izin"> Izin </button>
+       </div><input type="hidden" id="status" name="status" required>
+      </div><!-- Pilihan Tanggal -->
+      <div><label for="tanggal" class="block text-sm font-medium text-gray-700 mb-2">Tanggal</label> <input type="date" id="tanggal" name="tanggal" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </div><!-- Tombol Submit --> <button type="submit" id="submit-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-md font-medium transition-colors"> Kirim Absensi </button>
+     </form><!-- Pesan Status -->
+     <div id="message" class="mt-4 p-3 rounded-md hidden"></div>
+    </div>
+   </div><!-- Modal Login Admin -->
+   <div id="login-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+     <h2 class="text-xl font-bold mb-4 text-gray-800">Login Admin</h2>
+     <form id="login-form">
+      <div class="mb-4"><label for="username" class="block text-sm font-medium text-gray-700 mb-2">Username</label> <input type="text" id="username" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
+      <div class="mb-4"><label for="password" class="block text-sm font-medium text-gray-700 mb-2">Password</label> <input type="password" id="password" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
+      <div class="flex gap-3"><button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-md transition-colors"> Login </button> <button type="button" id="cancel-login" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white py-2 px-4 rounded-md transition-colors"> Batal </button>
+      </div>
+     </form>
+     <div id="login-error" class="mt-3 text-red-600 text-sm hidden"></div>
+    </div>
+   </div><!-- Halaman Admin -->
+   <div id="admin-page" class="hidden">
+    <div class="flex justify-between items-center mb-6">
+     <h2 class="text-2xl font-bold text-gray-800">Panel Admin</h2><button id="logout-btn" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md transition-colors"> Logout </button>
+    </div><!-- Statistik -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+     <div class="bg-white rounded-lg shadow p-4">
+      <h3 class="text-sm font-medium text-gray-500">Total Absensi</h3>
+      <p id="total-absensi" class="text-2xl font-bold text-blue-600">0</p>
+     </div>
+     <div class="bg-white rounded-lg shadow p-4">
+      <h3 class="text-sm font-medium text-gray-500">Hadir Hari Ini</h3>
+      <p id="hadir-hari-ini" class="text-2xl font-bold text-green-600">0</p>
+     </div>
+     <div class="bg-white rounded-lg shadow p-4">
+      <h3 class="text-sm font-medium text-gray-500">Sakit Hari Ini</h3>
+      <p id="sakit-hari-ini" class="text-2xl font-bold text-yellow-600">0</p>
+     </div>
+     <div class="bg-white rounded-lg shadow p-4">
+      <h3 class="text-sm font-medium text-gray-500">Izin Hari Ini</h3>
+      <p id="izin-hari-ini" class="text-2xl font-bold text-red-600">0</p>
+     </div>
+    </div><!-- Kontrol Admin -->
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+     <h3 class="text-lg font-semibold mb-4">Kontrol Admin</h3>
+     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"><button id="download-mingguan" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-md transition-colors"> Download Mingguan </button> <button id="download-bulanan" class="bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-md transition-colors"> Download Bulanan </button> <button id="download-tahunan" class="bg-purple-500 hover:bg-purple-600 text-white py-2 px-4 rounded-md transition-colors"> Download Tahunan </button> <button id="print-rekap" class="bg-gray-600 hover:bg-gray-700 text-white py-2 px-4 rounded-md transition-colors"> Print Rekap </button>
+     </div>
+    </div><!-- Filter -->
+    <div class="bg-white rounded-lg shadow p-4 mb-6">
+     <h3 class="text-lg font-semibold mb-3">Filter Data</h3>
+     <div class="grid grid-cols-1 md:grid-cols-3 gap-4"><select id="filter-jurusan" class="px-3 py-2 border border-gray-300 rounded-md"> <option value="">Semua Jurusan</option> <option value="PAI">PAI</option> <option value="PGMI">PGMI</option> <option value="MPI">MPI</option> <option value="PIAUD">PIAUD</option> <option value="Kelas PONDOK">Kelas PONDOK</option> </select> <select id="filter-semester" class="px-3 py-2 border border-gray-300 rounded-md"> <option value="">Semua Semester</option> <option value="1">Semester 1</option> <option value="2">Semester 2</option> <option value="3">Semester 3</option> <option value="4">Semester 4</option> <option value="5">Semester 5</option> <option value="6">Semester 6</option> <option value="7">Semester 7</option> <option value="8">Semester 8</option> <option value="transfer">Transfer</option> </select> <input type="date" id="filter-tanggal" class="px-3 py-2 border border-gray-300 rounded-md">
+     </div>
+    </div><!-- Tabel Rekap Absensi -->
+    <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+     <div class="px-6 py-4 border-b border-gray-200">
+      <h3 class="text-lg font-semibold">Rekap Absensi</h3>
+     </div>
+     <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200">
+       <thead class="bg-gray-50">
+        <tr>
+         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama</th>
+         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Semester</th>
+         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Jurusan</th>
+         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanggal</th>
+         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Waktu</th>
+         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider no-print">Aksi</th>
+        </tr>
+       </thead>
+       <tbody id="absensi-table" class="bg-white divide-y divide-gray-200"><!-- Data akan dimuat di sini -->
+       </tbody>
+      </table>
+     </div>
+    </div>
+   </div>
+  </div>
+  <script>
+        // Konfigurasi default
+        const defaultConfig = {
+            judul_utama: "ABSENSI MAHASISWA AIK STIT MUHAMMADIYAH TEMPURREJO DARING",
+            nama_institusi: "Sistem Absensi Digital"
+        };
+
+        // Variabel global
+        let currentData = [];
+        let isLoggedIn = false;
+
+        // Data handler untuk SDK
+        const dataHandler = {
+            onDataChanged(data) {
+                currentData = data;
+                if (isLoggedIn) {
+                    updateAdminStats();
+                    renderAbsensiTable();
+                }
+            }
+        };
+
+        // Inisialisasi SDK
+        async function initializeSDKs() {
+            try {
+                if (window.dataSdk) {
+                    const result = await window.dataSdk.init(dataHandler);
+                    if (!result.isOk) {
+                        console.error("Failed to initialize data SDK");
+                    }
+                }
+
+                if (window.elementSdk) {
+                    await window.elementSdk.init({
+                        defaultConfig,
+                        onConfigChange: async (config) => {
+                            const judulElement = document.getElementById('judul-utama');
+                            const institusiElement = document.getElementById('nama-institusi');
+                            
+                            if (judulElement) {
+                                judulElement.textContent = config.judul_utama || defaultConfig.judul_utama;
+                            }
+                            if (institusiElement) {
+                                institusiElement.textContent = config.nama_institusi || defaultConfig.nama_institusi;
+                            }
+                        },
+                        mapToCapabilities: (config) => ({
+                            recolorables: [],
+                            borderables: [],
+                            fontEditable: undefined,
+                            fontSizeable: undefined
+                        }),
+                        mapToEditPanelValues: (config) => new Map([
+                            ["judul_utama", config.judul_utama || defaultConfig.judul_utama],
+                            ["nama_institusi", config.nama_institusi || defaultConfig.nama_institusi]
+                        ])
+                    });
+                }
+            } catch (error) {
+                console.error("SDK initialization error:", error);
+            }
+        }
+
+        // Set tanggal hari ini sebagai default
+        document.getElementById('tanggal').valueAsDate = new Date();
+
+        // Handle status kehadiran
+        document.querySelectorAll('.status-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.status-btn').forEach(b => b.classList.remove('ring-2', 'ring-offset-2', 'ring-gray-400'));
+                this.classList.add('ring-2', 'ring-offset-2', 'ring-gray-400');
+                document.getElementById('status').value = this.dataset.status;
+            });
+        });
+
+        // Handle form absensi
+        document.getElementById('absensi-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            if (currentData.length >= 999) {
+                showMessage('Batas maksimum 999 data absensi telah tercapai. Silakan hubungi admin.', 'error');
+                return;
+            }
+
+            const submitBtn = document.getElementById('submit-btn');
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = 'Mengirim...';
+            submitBtn.disabled = true;
+            submitBtn.classList.add('loading');
+
+            const formData = new FormData(this);
+            const now = new Date();
+            
+            const absensiData = {
+                id: Date.now().toString(),
+                nama: formData.get('nama'),
+                semester: formData.get('semester'),
+                jurusan: formData.get('jurusan'),
+                status: formData.get('status'),
+                tanggal: formData.get('tanggal'),
+                waktu: now.toLocaleTimeString('id-ID')
+            };
+
+            if (window.dataSdk) {
+                const result = await window.dataSdk.create(absensiData);
+                
+                if (result.isOk) {
+                    showMessage('Absensi berhasil dikirim!', 'success');
+                    this.reset();
+                    document.getElementById('tanggal').valueAsDate = new Date();
+                    document.querySelectorAll('.status-btn').forEach(b => b.classList.remove('ring-2', 'ring-offset-2', 'ring-gray-400'));
+                } else {
+                    showMessage('Gagal mengirim absensi. Silakan coba lagi.', 'error');
+                }
+            }
+
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+            submitBtn.classList.remove('loading');
+        });
+
+        // Show message
+        function showMessage(text, type) {
+            const messageEl = document.getElementById('message');
+            messageEl.textContent = text;
+            messageEl.className = `mt-4 p-3 rounded-md ${type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`;
+            messageEl.classList.remove('hidden');
+            
+            setTimeout(() => {
+                messageEl.classList.add('hidden');
+            }, 5000);
+        }
+
+        // Handle admin login
+        document.getElementById('admin-btn').addEventListener('click', function() {
+            document.getElementById('login-modal').classList.remove('hidden');
+            document.getElementById('login-modal').classList.add('flex');
+        });
+
+        document.getElementById('cancel-login').addEventListener('click', function() {
+            document.getElementById('login-modal').classList.add('hidden');
+            document.getElementById('login-modal').classList.remove('flex');
+            document.getElementById('login-form').reset();
+            document.getElementById('login-error').classList.add('hidden');
+        });
+
+        document.getElementById('login-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            if (username === 'Hussein' && password === '347622') {
+                isLoggedIn = true;
+                document.getElementById('login-modal').classList.add('hidden');
+                document.getElementById('login-modal').classList.remove('flex');
+                document.getElementById('student-page').classList.add('hidden');
+                document.getElementById('admin-page').classList.remove('hidden');
+                updateAdminStats();
+                renderAbsensiTable();
+                this.reset();
+                document.getElementById('login-error').classList.add('hidden');
+            } else {
+                document.getElementById('login-error').textContent = 'Username atau password salah!';
+                document.getElementById('login-error').classList.remove('hidden');
+            }
+        });
+
+        // Handle logout
+        document.getElementById('logout-btn').addEventListener('click', function() {
+            isLoggedIn = false;
+            document.getElementById('admin-page').classList.add('hidden');
+            document.getElementById('student-page').classList.remove('hidden');
+        });
+
+        // Update admin statistics
+        function updateAdminStats() {
+            const today = new Date().toISOString().split('T')[0];
+            const todayData = currentData.filter(item => item.tanggal === today);
+            
+            document.getElementById('total-absensi').textContent = currentData.length;
+            document.getElementById('hadir-hari-ini').textContent = todayData.filter(item => item.status === 'Hadir').length;
+            document.getElementById('sakit-hari-ini').textContent = todayData.filter(item => item.status === 'Sakit').length;
+            document.getElementById('izin-hari-ini').textContent = todayData.filter(item => item.status === 'Izin').length;
+        }
+
+        // Render absensi table
+        function renderAbsensiTable() {
+            const tableBody = document.getElementById('absensi-table');
+            const filterJurusan = document.getElementById('filter-jurusan').value;
+            const filterSemester = document.getElementById('filter-semester').value;
+            const filterTanggal = document.getElementById('filter-tanggal').value;
+            
+            let filteredData = currentData;
+            
+            if (filterJurusan) {
+                filteredData = filteredData.filter(item => item.jurusan === filterJurusan);
+            }
+            if (filterSemester) {
+                filteredData = filteredData.filter(item => item.semester === filterSemester);
+            }
+            if (filterTanggal) {
+                filteredData = filteredData.filter(item => item.tanggal === filterTanggal);
+            }
+            
+            // Sort by date and time (newest first)
+            filteredData.sort((a, b) => {
+                const dateA = new Date(a.tanggal + ' ' + a.waktu);
+                const dateB = new Date(b.tanggal + ' ' + b.waktu);
+                return dateB - dateA;
+            });
+            
+            tableBody.innerHTML = filteredData.map(item => `
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${item.nama}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${item.semester}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${item.jurusan}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(item.status)}">
+                            ${item.status}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatDate(item.tanggal)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${item.waktu}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium no-print">
+                        <button onclick="deleteAbsensi('${item.__backendId}')" class="text-red-600 hover:text-red-900">Hapus</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Get status color
+        function getStatusColor(status) {
+            switch(status) {
+                case 'Hadir': return 'bg-green-100 text-green-800';
+                case 'Sakit': return 'bg-yellow-100 text-yellow-800';
+                case 'Izin': return 'bg-red-100 text-red-800';
+                default: return 'bg-gray-100 text-gray-800';
+            }
+        }
+
+        // Format date
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('id-ID', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+        }
+
+        // Delete absensi
+        async function deleteAbsensi(backendId) {
+            const item = currentData.find(d => d.__backendId === backendId);
+            if (!item) return;
+
+            const confirmDelete = document.createElement('div');
+            confirmDelete.innerHTML = `
+                <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div class="bg-white rounded-lg p-6 max-w-md mx-4">
+                        <h3 class="text-lg font-semibold mb-4">Konfirmasi Hapus</h3>
+                        <p class="mb-4">Yakin ingin menghapus absensi ${item.nama}?</p>
+                        <div class="flex gap-3">
+                            <button id="confirm-delete" class="flex-1 bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-md">Hapus</button>
+                            <button id="cancel-delete" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white py-2 px-4 rounded-md">Batal</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(confirmDelete);
+            
+            document.getElementById('confirm-delete').onclick = async () => {
+                if (window.dataSdk) {
+                    const result = await window.dataSdk.delete(item);
+                    if (result.isOk) {
+                        showMessage('Data berhasil dihapus!', 'success');
+                    } else {
+                        showMessage('Gagal menghapus data!', 'error');
+                    }
+                }
+                document.body.removeChild(confirmDelete);
+            };
+            
+            document.getElementById('cancel-delete').onclick = () => {
+                document.body.removeChild(confirmDelete);
+            };
+        }
+
+        // Filter handlers
+        document.getElementById('filter-jurusan').addEventListener('change', renderAbsensiTable);
+        document.getElementById('filter-semester').addEventListener('change', renderAbsensiTable);
+        document.getElementById('filter-tanggal').addEventListener('change', renderAbsensiTable);
+
+        // Download functions
+        document.getElementById('download-mingguan').addEventListener('click', function() {
+            downloadData('mingguan');
+        });
+
+        document.getElementById('download-bulanan').addEventListener('click', function() {
+            downloadData('bulanan');
+        });
+
+        document.getElementById('download-tahunan').addEventListener('click', function() {
+            downloadData('tahunan');
+        });
+
+        function downloadData(period) {
+            const now = new Date();
+            let filteredData = [];
+            
+            if (period === 'mingguan') {
+                const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                filteredData = currentData.filter(item => new Date(item.tanggal) >= weekAgo);
+            } else if (period === 'bulanan') {
+                const monthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+                filteredData = currentData.filter(item => new Date(item.tanggal) >= monthAgo);
+            } else if (period === 'tahunan') {
+                const yearAgo = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+                filteredData = currentData.filter(item => new Date(item.tanggal) >= yearAgo);
+            }
+            
+            const csv = generateCSV(filteredData);
+            downloadCSV(csv, `absensi_${period}_${now.toISOString().split('T')[0]}.csv`);
+        }
+
+        function generateCSV(data) {
+            const headers = ['Nama', 'Semester', 'Jurusan', 'Status', 'Tanggal', 'Waktu'];
+            const rows = data.map(item => [
+                item.nama,
+                item.semester,
+                item.jurusan,
+                item.status,
+                item.tanggal,
+                item.waktu
+            ]);
+            
+            return [headers, ...rows].map(row => 
+                row.map(field => `"${field}"`).join(',')
+            ).join('\n');
+        }
+
+        function downloadCSV(csv, filename) {
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', filename);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // Print function
+        document.getElementById('print-rekap').addEventListener('click', function() {
+            window.print();
+        });
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeSDKs();
+        });
+    </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9989ae6bb1a1f922',t:'MTc2MjE0OTk0MS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
