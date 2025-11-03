@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Absensi Digital Mahasiswa</title>
-  <script src="/_sdk/data_sdk.js"></script>
   <script src="/_sdk/element_sdk.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
@@ -21,6 +20,7 @@
         }
     </style>
   <style>@view-transition { navigation: auto; }</style>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
  </head>
  <body class="h-full bg-gradient-to-br from-blue-50 to-green-50 font-sans">
   <div class="min-h-full p-4"><!-- Header dengan tombol admin -->
@@ -65,7 +65,9 @@
    </div><!-- Halaman Admin -->
    <div id="admin-page" class="hidden">
     <div class="flex justify-between items-center mb-6">
-     <h2 class="text-2xl font-bold text-gray-800">Panel Admin</h2><button id="logout-btn" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md transition-colors"> Logout </button>
+     <h2 class="text-2xl font-bold text-gray-800">Panel Admin</h2>
+     <div class="flex gap-3"><button id="clear-data-btn" class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-md transition-colors"> Hapus Semua Data </button> <button id="logout-btn" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md transition-colors"> Logout </button>
+     </div>
     </div><!-- Statistik -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
      <div class="bg-white rounded-lg shadow p-4">
@@ -88,6 +90,16 @@
     <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
      <h3 class="text-lg font-semibold mb-4">Kontrol Admin</h3>
      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"><button id="download-mingguan" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-md transition-colors"> Download Mingguan </button> <button id="download-bulanan" class="bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-md transition-colors"> Download Bulanan </button> <button id="download-tahunan" class="bg-purple-500 hover:bg-purple-600 text-white py-2 px-4 rounded-md transition-colors"> Download Tahunan </button> <button id="print-rekap" class="bg-gray-600 hover:bg-gray-700 text-white py-2 px-4 rounded-md transition-colors"> Print Rekap </button>
+     </div>
+    </div><!-- Import/Export Data -->
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+     <h3 class="text-lg font-semibold mb-4">Import/Export Data</h3>
+     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div><label for="import-file" class="block text-sm font-medium text-gray-700 mb-2">Import Data JSON</label> <input type="file" id="import-file" accept=".json" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"> <button id="import-btn" class="mt-2 w-full bg-indigo-500 hover:bg-indigo-600 text-white py-2 px-4 rounded-md transition-colors"> Import Data </button>
+      </div>
+      <div><label class="block text-sm font-medium text-gray-700 mb-2">Export Data</label> <button id="export-json" class="w-full bg-teal-500 hover:bg-teal-600 text-white py-2 px-4 rounded-md transition-colors"> Export ke JSON </button>
+       <p class="text-xs text-gray-500 mt-1">Backup data untuk dipindah ke komputer lain</p>
+      </div>
      </div>
     </div><!-- Filter -->
     <div class="bg-white rounded-lg shadow p-4 mb-6">
@@ -130,27 +142,26 @@
         let currentData = [];
         let isLoggedIn = false;
 
-        // Data handler untuk SDK
-        const dataHandler = {
-            onDataChanged(data) {
-                currentData = data;
-                if (isLoggedIn) {
-                    updateAdminStats();
-                    renderAbsensiTable();
-                }
-            }
-        };
+        // LocalStorage functions
+        function saveToLocalStorage(data) {
+            localStorage.setItem('absensiData', JSON.stringify(data));
+        }
 
-        // Inisialisasi SDK
-        async function initializeSDKs() {
+        function loadFromLocalStorage() {
+            const data = localStorage.getItem('absensiData');
+            return data ? JSON.parse(data) : [];
+        }
+
+        function clearLocalStorage() {
+            localStorage.removeItem('absensiData');
+            currentData = [];
+            updateAdminStats();
+            renderAbsensiTable();
+        }
+
+        // Inisialisasi Element SDK
+        async function initializeElementSDK() {
             try {
-                if (window.dataSdk) {
-                    const result = await window.dataSdk.init(dataHandler);
-                    if (!result.isOk) {
-                        console.error("Failed to initialize data SDK");
-                    }
-                }
-
                 if (window.elementSdk) {
                     await window.elementSdk.init({
                         defaultConfig,
@@ -178,7 +189,16 @@
                     });
                 }
             } catch (error) {
-                console.error("SDK initialization error:", error);
+                console.error("Element SDK initialization error:", error);
+            }
+        }
+
+        // Load data saat halaman dimuat
+        function loadData() {
+            currentData = loadFromLocalStorage();
+            if (isLoggedIn) {
+                updateAdminStats();
+                renderAbsensiTable();
             }
         }
 
@@ -195,14 +215,9 @@
         });
 
         // Handle form absensi
-        document.getElementById('absensi-form').addEventListener('submit', async function(e) {
+        document.getElementById('absensi-form').addEventListener('submit', function(e) {
             e.preventDefault();
             
-            if (currentData.length >= 999) {
-                showMessage('Batas maksimum 999 data absensi telah tercapai. Silakan hubungi admin.', 'error');
-                return;
-            }
-
             const submitBtn = document.getElementById('submit-btn');
             const originalText = submitBtn.textContent;
             submitBtn.textContent = 'Mengirim...';
@@ -222,18 +237,14 @@
                 waktu: now.toLocaleTimeString('id-ID')
             };
 
-            if (window.dataSdk) {
-                const result = await window.dataSdk.create(absensiData);
-                
-                if (result.isOk) {
-                    showMessage('Absensi berhasil dikirim!', 'success');
-                    this.reset();
-                    document.getElementById('tanggal').valueAsDate = new Date();
-                    document.querySelectorAll('.status-btn').forEach(b => b.classList.remove('ring-2', 'ring-offset-2', 'ring-gray-400'));
-                } else {
-                    showMessage('Gagal mengirim absensi. Silakan coba lagi.', 'error');
-                }
-            }
+            // Simpan ke localStorage
+            currentData.push(absensiData);
+            saveToLocalStorage(currentData);
+            
+            showMessage('Absensi berhasil dikirim!', 'success');
+            this.reset();
+            document.getElementById('tanggal').valueAsDate = new Date();
+            document.querySelectorAll('.status-btn').forEach(b => b.classList.remove('ring-2', 'ring-offset-2', 'ring-gray-400'));
 
             submitBtn.textContent = originalText;
             submitBtn.disabled = false;
@@ -277,8 +288,7 @@
                 document.getElementById('login-modal').classList.remove('flex');
                 document.getElementById('student-page').classList.add('hidden');
                 document.getElementById('admin-page').classList.remove('hidden');
-                updateAdminStats();
-                renderAbsensiTable();
+                loadData();
                 this.reset();
                 document.getElementById('login-error').classList.add('hidden');
             } else {
@@ -292,6 +302,35 @@
             isLoggedIn = false;
             document.getElementById('admin-page').classList.add('hidden');
             document.getElementById('student-page').classList.remove('hidden');
+        });
+
+        // Clear all data
+        document.getElementById('clear-data-btn').addEventListener('click', function() {
+            const confirmDiv = document.createElement('div');
+            confirmDiv.innerHTML = `
+                <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div class="bg-white rounded-lg p-6 max-w-md mx-4">
+                        <h3 class="text-lg font-semibold mb-4 text-red-600">⚠️ Peringatan!</h3>
+                        <p class="mb-4">Yakin ingin menghapus SEMUA data absensi? Tindakan ini tidak dapat dibatalkan!</p>
+                        <div class="flex gap-3">
+                            <button id="confirm-clear" class="flex-1 bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-md">Ya, Hapus Semua</button>
+                            <button id="cancel-clear" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white py-2 px-4 rounded-md">Batal</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(confirmDiv);
+            
+            document.getElementById('confirm-clear').onclick = () => {
+                clearLocalStorage();
+                showMessage('Semua data berhasil dihapus!', 'success');
+                document.body.removeChild(confirmDiv);
+            };
+            
+            document.getElementById('cancel-clear').onclick = () => {
+                document.body.removeChild(confirmDiv);
+            };
         });
 
         // Update admin statistics
@@ -344,7 +383,7 @@
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatDate(item.tanggal)}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${item.waktu}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium no-print">
-                        <button onclick="deleteAbsensi('${item.__backendId}')" class="text-red-600 hover:text-red-900">Hapus</button>
+                        <button onclick="deleteAbsensi('${item.id}')" class="text-red-600 hover:text-red-900">Hapus</button>
                     </td>
                 </tr>
             `).join('');
@@ -372,8 +411,8 @@
         }
 
         // Delete absensi
-        async function deleteAbsensi(backendId) {
-            const item = currentData.find(d => d.__backendId === backendId);
+        function deleteAbsensi(id) {
+            const item = currentData.find(d => d.id === id);
             if (!item) return;
 
             const confirmDelete = document.createElement('div');
@@ -392,15 +431,12 @@
             
             document.body.appendChild(confirmDelete);
             
-            document.getElementById('confirm-delete').onclick = async () => {
-                if (window.dataSdk) {
-                    const result = await window.dataSdk.delete(item);
-                    if (result.isOk) {
-                        showMessage('Data berhasil dihapus!', 'success');
-                    } else {
-                        showMessage('Gagal menghapus data!', 'error');
-                    }
-                }
+            document.getElementById('confirm-delete').onclick = () => {
+                currentData = currentData.filter(d => d.id !== id);
+                saveToLocalStorage(currentData);
+                updateAdminStats();
+                renderAbsensiTable();
+                showMessage('Data berhasil dihapus!', 'success');
                 document.body.removeChild(confirmDelete);
             };
             
@@ -474,6 +510,50 @@
             document.body.removeChild(link);
         }
 
+        // Export to JSON
+        document.getElementById('export-json').addEventListener('click', function() {
+            const dataStr = JSON.stringify(currentData, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `absensi_backup_${new Date().toISOString().split('T')[0]}.json`;
+            link.click();
+            URL.revokeObjectURL(url);
+            showMessage('Data berhasil diexport!', 'success');
+        });
+
+        // Import from JSON
+        document.getElementById('import-btn').addEventListener('click', function() {
+            const fileInput = document.getElementById('import-file');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                showMessage('Pilih file JSON terlebih dahulu!', 'error');
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+                    if (Array.isArray(importedData)) {
+                        currentData = importedData;
+                        saveToLocalStorage(currentData);
+                        updateAdminStats();
+                        renderAbsensiTable();
+                        showMessage(`Berhasil import ${importedData.length} data absensi!`, 'success');
+                        fileInput.value = '';
+                    } else {
+                        showMessage('Format file JSON tidak valid!', 'error');
+                    }
+                } catch (error) {
+                    showMessage('Error membaca file JSON!', 'error');
+                }
+            };
+            reader.readAsText(file);
+        });
+
         // Print function
         document.getElementById('print-rekap').addEventListener('click', function() {
             window.print();
@@ -481,8 +561,9 @@
 
         // Initialize when page loads
         document.addEventListener('DOMContentLoaded', function() {
-            initializeSDKs();
+            initializeElementSDK();
+            loadData();
         });
     </script>
- <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9989ae6bb1a1f922',t:'MTc2MjE0OTk0MS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9989cb4c04a9407f',t:'MTc2MjE1MTEyNC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
